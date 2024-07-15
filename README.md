@@ -10,4 +10,4 @@ Contains...
 - diffusion model coding
   - [forward process - using MNIST](/forward_process.ipynb)
   - [U-net Learning](/Unet_learning.ipynb) : [referenced website](https://huggingface.co/blog/annotated-diffusion)
-  - [diffusion model](/diffusion_model.ipynb)
+  - [Diffusion model using MNIST dataset](/diffusion_model.ipynb)

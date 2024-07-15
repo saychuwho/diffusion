@@ -165,7 +165,8 @@ cython_debug/
 dataset/
 data/
 img_from_notebook/
-
 .DS_store
 results/
 *.gif
+*.pt
+result_img/
