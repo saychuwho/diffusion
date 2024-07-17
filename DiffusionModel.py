@@ -3,6 +3,7 @@
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
+import numpy as np
 
 
 """ Beta Scheduling """
@@ -273,6 +274,69 @@ def sampling_guided(timestep, condition:int, delta, betas, sampling_1, sampling_
     x = (z_next_1 * delta)*(z_next_2 * (1-delta))
 
     return x
+
+""" sampling - DDIM """
+
+@torch.no_grad()
+def sample_DDIM(x:torch.Tensor, 
+                t, 
+                sqrt_alphas, 
+                sqrt_one_minus_alphas, 
+                net, 
+                device):
+    # evaluate network output
+    net_t = torch.tensor([t], device=device)
+    net_t_minus_1 = torch.tensor([t-1], device=device)
+
+    sqrt_alpha_t = extract(sqrt_alphas, net_t , x.shape)
+    sqrt_alpha_t_minus_1 = extract(sqrt_alphas, net_t_minus_1, x.shape)
+    sqrt_one_minus_alpha_t = extract(sqrt_one_minus_alphas, net_t, x.shape)
+    sqrt_one_minus_alpha_t_minus_1 = extract(sqrt_one_minus_alphas, net_t_minus_1, x.shape)
+    
+    x_1 = sqrt_alpha_t_minus_1 * ((x - sqrt_one_minus_alpha_t * net(x, net_t))/sqrt_alpha_t)
+    x_2 = sqrt_one_minus_alpha_t_minus_1 * net(x, net_t)
+
+    return x_1 + x_2
+
+@torch.no_grad()
+def sampling_DDIM(timestep,
+                  sqrt_alphas,
+                  sqrt_one_minus_alphas,  
+                  net, 
+                  device, 
+                  noise=None,
+                  length=None):
+    
+    # generate initial noise
+    if noise==None:
+        noise = torch.randn((1,1,32,32)) # sample from final latent space
+    x = noise.to(device)
+    # sampling_1 = sampling_1.to(device)
+    # sampling_2 = sampling_2.to(device)
+    # betas = betas.to(device)
+
+    # generate sequence tau
+    tau = range(1, timestep)
+    if length != None:
+        tau = sorted(list(np.random.choice(range(2,timestep), length, replace=False)))
+
+    for t in reversed(tau):
+        t = int(t)
+        print(f"tau : {t}") # tmp
+        x = sample_DDIM(x, t, sqrt_alphas, sqrt_one_minus_alphas, net, device)
+    
+    t = 2    
+    x = sample_DDIM(x, t, sqrt_alphas, sqrt_one_minus_alphas, net, device)
+
+    t_1 = torch.tensor([1], device=device)
+
+    sqrt_alpha_1 = extract(sqrt_alphas, t_1, x.shape)
+    sqrt_one_minus_alpha_1 = extract(sqrt_one_minus_alphas, t_1, x.shape)
+
+    x = (x - sqrt_one_minus_alpha_1 * net(x, t_1)) / sqrt_alpha_1
+
+    return x
+
 
 
 """ save & load models (for inference) """
