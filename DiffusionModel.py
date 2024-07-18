@@ -318,22 +318,31 @@ def sampling_DDIM(timestep,
     # generate sequence tau
     tau = range(1, timestep)
     if length != None:
-        tau = sorted(list(np.random.choice(range(2,timestep), length, replace=False)))
+        tau = sorted(list(np.random.choice(range(2,timestep-1), length, replace=False)))
+
+    # start from Terminal step
+    t = timestep - 1
+    print(f"tau : {t}")
+    x = sample_DDIM(x, t, sqrt_alphas, sqrt_one_minus_alphas, net, device)
 
     for t in reversed(tau):
         t = int(t)
         print(f"tau : {t}") # tmp
         x = sample_DDIM(x, t, sqrt_alphas, sqrt_one_minus_alphas, net, device)
     
-    t = 2    
+    # end at step 1
+    t = 1
+    print(f"tau : {t}") 
     x = sample_DDIM(x, t, sqrt_alphas, sqrt_one_minus_alphas, net, device)
 
-    t_1 = torch.tensor([1], device=device)
+    # end step
+    t_0 = torch.tensor([0], device=device)
 
-    sqrt_alpha_1 = extract(sqrt_alphas, t_1, x.shape)
-    sqrt_one_minus_alpha_1 = extract(sqrt_one_minus_alphas, t_1, x.shape)
+    sqrt_alpha_1 = extract(sqrt_alphas, t_0, x.shape)
+    sqrt_one_minus_alpha_1 = extract(sqrt_one_minus_alphas, t_0, x.shape)
 
-    x = (x - sqrt_one_minus_alpha_1 * net(x, t_1)) / sqrt_alpha_1
+    x = (x - sqrt_one_minus_alpha_1 * net(x, t_0)) / sqrt_alpha_1
+
 
     return x
 
