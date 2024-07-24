@@ -52,7 +52,6 @@ class GuidedUnet(nn.Module):
                     [
                         block_klass(dim_in, dim_in, time_emb_dim=time_dim),
                         block_klass(dim_in, dim_in, time_emb_dim=time_dim),
-                        block_klass(dim_in, dim_in, time_emb_dim=time_dim),
                         Residual(PreNorm(dim_in, LinearAttention(dim_in))),
                         Downsample(dim_in, dim_out)
                         if not is_last
@@ -66,6 +65,7 @@ class GuidedUnet(nn.Module):
         self.mid_attn = Residual(PreNorm(mid_dim, Attention(mid_dim)))
         self.mid_block2 = block_klass(mid_dim, mid_dim, time_emb_dim=time_dim)
         self.mid_block3 = block_klass(mid_dim, mid_dim, time_emb_dim=time_dim)
+        self.mid_block4 = block_klass(mid_dim, mid_dim, time_emb_dim=time_dim)
 
         for ind, (dim_in, dim_out) in enumerate(reversed(in_out)):
             is_last = ind == (len(in_out) - 1)
@@ -73,7 +73,6 @@ class GuidedUnet(nn.Module):
             self.ups.append(
                 nn.ModuleList(
                     [
-                        block_klass(dim_out + dim_in, dim_out, time_emb_dim=time_dim),
                         block_klass(dim_out + dim_in, dim_out, time_emb_dim=time_dim),
                         block_klass(dim_out + dim_in, dim_out, time_emb_dim=time_dim),
                         Residual(PreNorm(dim_out, LinearAttention(dim_out))),
@@ -100,24 +99,18 @@ class GuidedUnet(nn.Module):
         t = self.time_mlp(time)
 
         # add conditional variable (MNIST label)
+        c = None
         if condition != None:
             c = self.time_mlp(condition)
-        else:
-            c = None
 
         h = []
 
         # down
-        for block1, block2, block3, attn, downsample in self.downs:
+        for block1, block2, attn, downsample in self.downs:
             x = block1(x, t)
             h.append(x)
 
             x = block2(x, t) 
-            x = attn(x)
-            h.append(x)
-
-            # modified part to accept conditional variable c
-            x = block3(x, c)
             x = attn(x)
             h.append(x)
 
@@ -131,19 +124,16 @@ class GuidedUnet(nn.Module):
         # modified part to accept conditional variable c
         x = self.mid_attn(x)
         x = self.mid_block3(x, c)
+        x = self.mid_attn(x)
+        x = self.mid_block4(x, c)
 
         # up
-        for block1, block2, block3, attn, upsample in self.ups:
+        for block1, block2, attn, upsample in self.ups:
             x = torch.cat((x, h.pop()), dim=1) # torch.cat의 역할은? h에 저장된 이전 downsampling 과정에서 값들을 upsampling 할 때 넣어주는 역할!
             x = block1(x, t)
 
             x = torch.cat((x, h.pop()), dim=1)
             x = block2(x, t) 
-            x = attn(x)
-
-            # modified part to accept conditional variable c
-            x = torch.cat((x, h.pop()), dim=1)
-            x = block3(x, c) 
             x = attn(x)
 
             x = upsample(x)

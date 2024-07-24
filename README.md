@@ -36,5 +36,6 @@ Learning Diffusion Model(DDPM) and basics of PyTorch to code DDPM
     - [DDIM_sampling.ipynb](./DDIM_sampling.ipynb) : DDIM sampling from DDPM model
 
 ### Paper reviews
-  - [Diffusion Model](./diffusion_presentation.pdf)
-  - [DDIM paper](./DDIM_presentation.pdf)
+  - [Diffusion Model - Presentation](./diffusion_presentation.pdf)
+  - [DDIM paper - Presentation](./DDIM_presentation.pdf)
+  - [SnapFusion paper - Presentation](./snapfusion_presentation.pdf)

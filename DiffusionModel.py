@@ -268,7 +268,7 @@ def sampling_guided(timestep, condition:int, delta, betas, sqrt_one_minus_alphas
 
 
 # exponential scheduling for tau in DDIM scheduling
-def DDIM_exp_scheduling(length, timestep):
+def DDIM_exp_scheduling(length, timestep, comp=False):
     y_min = 1
     y_max = timestep
     x = torch.linspace(-6,6,length)
@@ -285,7 +285,10 @@ def DDIM_exp_scheduling(length, timestep):
         # print(int(round(tmp_3[i].tolist())))
 
         if ret and (int(round(tmp_3[i].tolist())) <= ret[-1]):
-            ret.append(ret[-1] + 1)
+            if not comp:
+                ret.append(ret[-1] + 1)
+            else:
+                continue
         else:
             ret.append(int(round(tmp_3[i].tolist())))
 
@@ -325,7 +328,8 @@ def sampling_DDIM(timestep,
                   net, 
                   device, 
                   noise=None,
-                  length=None):
+                  length=None,
+                  sampling="exp"):
     
     # generate initial noise
     if noise==None:
@@ -336,7 +340,10 @@ def sampling_DDIM(timestep,
     tau = range(1, timestep)
     if length != None:
         # tau = [tau_iter for tau_iter in range(1, timestep, timestep//length)] # linear scheduling
-        tau = DDIM_exp_scheduling(length, timestep-1)
+        if sampling == "exp":
+            tau = DDIM_exp_scheduling(length, timestep-1)
+        elif sampling == "comp exp":
+            tau = DDIM_exp_scheduling(length, timestep-1, True)
 
     # generating process
     for t in reversed(tau):
